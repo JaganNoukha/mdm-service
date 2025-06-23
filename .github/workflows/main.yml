@@ -17,6 +17,8 @@ jobs:
       with:
         node-version: '20'
 
+    - run: npm ci
+
     - name: Create .env file
       run: |
         touch .env
@@ -29,6 +31,6 @@ jobs:
           AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
           AWS_USER_NAME: ${{secrets.AWS_USER_NAME}}
 
-    - run: npm ci
+    
 
    
