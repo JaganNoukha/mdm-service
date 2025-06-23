@@ -17,22 +17,24 @@ jobs:
       with:
         node-version: '20'
 
-    - run: npm ci
+    - name: Install dependencies
+      run: npm ci
 
     - name: Create .env file
       run: |
-        touch .env
         echo "${{ secrets.PROD_ENV_FILE }}" > .env
 
     - name: Deployment to EC2
-      run: |
       env:
-          AWS_EC2_HOST: ${{ secrets.AWS_EC2_HOST }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-          AWS_USER_NAME: ${{secrets.AWS_USER_NAME}}
+        AWS_EC2_HOST: ${{ secrets.AWS_EC2_HOST }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+        AWS_USER_NAME: ${{ secrets.AWS_USER_NAME }}
+      run: |
+        echo "Deploying to EC2..."
+        # Example using scp and ssh (replace with your deployment script)
+        scp -o StrictHostKeyChecking=no -i key.pem -r . ec2-user@${AWS_EC2_HOST}:/home/ec2-user/app
+        ssh -o StrictHostKeyChecking=no -i key.pem ec2-user@${AWS_EC2_HOST} "cd /home/ec2-user/app && npm install && pm2 restart app"
 
     - name: Run dev
       run: npm run start:dev
-
-   
