@@ -25,6 +25,7 @@ jobs:
         echo "${{ secrets.PROD_ENV_FILE }}" > .env
 
     - name: Deployment to EC2
+      run: |
       env:
           AWS_EC2_HOST: ${{ secrets.AWS_EC2_HOST }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
