@@ -22,6 +22,7 @@ jobs:
 
     - name: Create .env file
       run: |
+        touch .env
         echo "${{ secrets.PROD_ENV_FILE }}" > .env
 
     - name: Deployment to EC2
