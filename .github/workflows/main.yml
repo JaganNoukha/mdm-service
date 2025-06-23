@@ -28,4 +28,7 @@ jobs:
         AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         AWS_USER_NAME: ${{ secrets.AWS_USER_NAME }}
         AWS_MONGO_URI: ${{ secrets.AWS_MONGO_URI }}
+
+    - name: Run dev
+      run: npm run start:dev
         
