@@ -31,6 +31,7 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         AWS_USER_NAME: ${{ secrets.AWS_USER_NAME }}
+        AWS_MONGODB_URI: ${{ secrets.AWS_MONGODB_URI }}
         
     - name: Run dev
       run: npm run start:dev
