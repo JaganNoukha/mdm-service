@@ -43,3 +43,5 @@ jobs:
         AWS_USER_NAME: ${{ secrets.AWS_USER_NAME }}
         AWS_MONGO_URI: ${{ secrets.AWS_MONGO_URI }}
         
+    - name: Run Dev
+      run: npm start
