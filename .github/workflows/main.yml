@@ -34,9 +34,6 @@ jobs:
         ls -lh node_modules.zip  # Debugging step to check if file is created
       continue-on-error: true
 
-    - name : Run
-      run: npm run start
-
     - name: Deployment to EC2
       run: |
       env:
