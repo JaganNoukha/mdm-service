@@ -1,28 +1,43 @@
-name: Deploy to Server
+name: Node.js CI/CD
 
 on:
   push:
-    branches:
-      - main  # or your deployment branch
+    branches: [ "main" ]
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script: |
-            echo "Deploying..."
-            cd /path/to/project
-            git pull
-            npm install
-            pm2 restart your-app
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+  
+  # Step 3: Install dependencies
+    - name: Install Dependencies
+      run: npm install
+
+  # Step 4: Build the application
+    - name: Build the Application
+      run: npm run build
+
+  # Step 5: Archive the build artifacts and node_modules using zip
+    - name: Archive Build Artifacts and node_modules
+      run: |
+        zip -r build.zip .
+        zip -r node_modules.zip node_modules/
+        ls -lh node_modules.zip  # Debugging step to check if file is created
+      continue-on-error: true
+
+    - name: Deployment to EC2
+      run: |
+      env:
+        AWS_EC2_HOST: ${{ secrets.AWS_EC2_HOST }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+        AWS_USER_NAME: ${{ secrets.AWS_USER_NAME }}
