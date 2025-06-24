@@ -2,45 +2,85 @@ name: Node.js CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - "main"
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm' # Cache node modules for faster builds
 
-  
-  # Step 3: Install dependencies
-    - name: Install Dependencies
-      run: npm install
+      - name: Install Dependencies
+        run: npm ci # 'npm ci' is preferred over 'npm install' in CI environments for clean installs
 
-  # Step 4: Build the application
-    - name: Build the Application
-      run: npm run build
+      - name: Build the Application
+        run: npm run build
 
-  # Step 5: Archive the build artifacts and node_modules using zip
-    - name: Archive Build Artifacts and node_modules
-      run: |
-        zip -r build.zip .
-        zip -r node_modules.zip node_modules/
-        ls -lh node_modules.zip  # Debugging step to check if file is created
-      continue-on-error: true
+      - name: Archive Build Artifacts
+        run: |
+          # Only archive the build output, not node_modules
+          zip -r build.zip dist # Assuming 'dist' is your build output directory, adjust if different
+        working-directory: . # Ensure zipping happens from the root of the repository
 
-    - name: Deployment to EC2
-      env:
-        SSH_HOST: ${{ secrets.SSH_HOST }}
-        SSH_KEY: ${{ secrets.SSH_KEY }}
-        AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-        SSH_USER: ${{ secrets.SSH_USER }}
-        
-      run: |
-        npm start
-        
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-app-build
+          path: build.zip # This makes the artifact available to subsequent jobs or for download
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build # This ensures the deploy job only runs after the build job is successful
+
+    steps:
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: node-app-build
+          path: . # Downloads the build.zip to the current directory
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }} # Use the secret directly here
+
+      - name: Deploy to EC2
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          # 1. Transfer the build artifact to EC2
+          scp build.zip $SSH_USER@$SSH_HOST:/path/to/your/app/directory/build.zip
+
+          # 2. SSH into the EC2 instance and perform deployment steps
+          ssh $SSH_USER@$SSH_HOST << 'EOF'
+            # Navigate to your application directory
+            cd /path/to/your/app/directory/
+
+            # Unzip the new build
+            unzip -o build.zip -d . # -o overwrites existing files, -d extracts to current directory
+
+            # Install dependencies on the EC2 instance (if node_modules are not bundled)
+            # This is generally preferred for production
+            npm install --production # Install only production dependencies
+
+            # Restart your application service (e.g., using PM2, systemd, or a simple node command)
+            # Example using PM2:
+            pm2 restart your_app_name || pm2 start dist/index.js --name your_app_name # Adjust based on your entry file
+
+            # Clean up the build zip file on EC2 (optional)
+            rm build.zip
+          EOF
