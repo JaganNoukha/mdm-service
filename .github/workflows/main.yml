@@ -34,6 +34,9 @@ jobs:
         ls -lh node_modules.zip  # Debugging step to check if file is created
       continue-on-error: true
 
+    - name : Run
+      run: npm run start
+
     - name: Deployment to EC2
       run: |
       env:
@@ -41,7 +44,3 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         AWS_USER_NAME: ${{ secrets.AWS_USER_NAME }}
-        AWS_MONGO_URI: ${{ secrets.AWS_MONGO_URI }}
-        
-    - name: Run Dev
-      run: npm start
