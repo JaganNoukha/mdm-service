@@ -34,7 +34,6 @@ jobs:
         SSH_USER: ${{ secrets.SSH_USER }}
       run: |
         echo "Changing to app directory..."
-        cd ~/mdm-service
         
         echo "Installing production dependencies..."
         npm install 
