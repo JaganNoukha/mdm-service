@@ -2,48 +2,73 @@ name: Node.js CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - "main"
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-  
-  # Step 3: Install dependencies
-    - name: Install Dependencies
-      run: npm install
+      - name: Install Dependencies
+        run: npm ci
 
-  # Step 4: Build the application
-    - name: Build the Application
-      run: npm run build
+      - name: Build the Application
+        run: npm run build
 
-  # Step 5: Archive the build artifacts and node_modules using zip
-    - name: Archive Build Artifacts and node_modules
-      run: |
-        zip -r build.zip .
-        zip -r node_modules.zip node_modules/
-        ls -lh node_modules.zip  # Debugging step to check if file is created
-      continue-on-error: true
+      - name: Archive Build Artifacts
+        run: zip -r build.zip dist
 
-    - name: Deployment to EC2
-      run: |
-      env:
-        SSH_HOST: ${{ secrets.SSH_HOST }}
-        SSH_KEY: ${{ secrets.SSH_KEY }}
-        AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-        SSH_USER: ${{ secrets.SSH_USER }}
-        
-    - name: Run dev
-      run: |
-        cd ~/mdm-service
-        npm install -g pm2
-        pm2 start main.js
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-app-build
+          path: build.zip
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: node-app-build
+          path: .
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+
+      - name: Deploy to EC2
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+        run: |
+          scp build.zip $SSH_USER@$SSH_HOST:/home/ubuntu/mdm-service/build.zip
+          ssh $SSH_USER@$SSH_HOST << 'EOF'
+            cd /home/ubuntu/mdm-service
+            unzip -o build.zip -d .
+            npm install --production
+            
+            fuser -k -n tcp 3000 || true
+            
+            nohup node dist/index.js &
+
+            rm build.zip
+          EOF
