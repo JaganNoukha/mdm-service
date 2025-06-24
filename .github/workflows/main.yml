@@ -44,5 +44,6 @@ jobs:
         
     - name: Run dev
       run: |
+        cd ~/mdm-service/dict/scr/main.js
         npm install -g pm2
         pm2 start main.js
