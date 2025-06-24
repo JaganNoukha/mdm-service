@@ -43,12 +43,19 @@ jobs:
         echo "$SSH_KEY" > ec2_key.pem
         chmod 600 ec2_key.pem
 
-        scp -o StrictHostKeyChecking=no -i ec2_key.pem build.zip $SSH_USER@$SSH_HOST:/home/$SSH_USER/
         ssh -o StrictHostKeyChecking=no -i ec2_key.pem $SSH_USER@$SSH_HOST << 'EOF'
-          unzip -o build.zip -d ~/app/
-          cd ~/app/
-          npm install --production
-          pm2 restart app || pm2 start npm --name "app" -- start
+        set -e
+        echo "Unzipping build.zip..."
+        unzip -o build.zip -d ~/app/
+        
+        echo "Changing to app directory..."
+        cd ~/app/
+        
+        echo "Installing production dependencies..."
+        npm install --production
+        
+        echo "Restarting or starting PM2 app..."
+        pm2 restart app || pm2 start npm --name "app" -- start
         EOF
 
     
