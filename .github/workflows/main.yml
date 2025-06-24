@@ -49,8 +49,8 @@ jobs:
         echo "Installing production dependencies..."
         npm install 
         
-        echo "Restarting or starting PM2 app..."
-        pm2 restart app
+        echo "Starting app..."
+        npm start
         EOF
 
     
