@@ -17,7 +17,6 @@ jobs:
       with:
         node-version: '20'
 
-  
   # Step 3: Install dependencies
     - name: Install Dependencies
       run: npm install
@@ -41,3 +40,6 @@ jobs:
         SSH_KEY: ${{ secrets.SSH_KEY }}
         AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         SSH_USER: ${{ secrets.SSH_USER }}
+
+    - name: Run
+      run: npm start
