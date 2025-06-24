@@ -33,9 +33,7 @@ jobs:
       continue-on-error: true
 
     - name: Deployment to EC2
-      # This step is missing the 'run' block and actual deployment commands.
-      # You'll need to add commands here to transfer your build artifact and
-      # manage your application on the EC2 instance (e.g., using SCP and SSH).
+      run: |
       env:
         SSH_HOST: ${{ secrets.SSH_HOST }}
         SSH_KEY: ${{ secrets.SSH_KEY }}
