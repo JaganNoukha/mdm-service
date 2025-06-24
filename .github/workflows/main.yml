@@ -41,16 +41,16 @@ jobs:
         SSH_USER: ${{ secrets.SSH_USER }}
       run: |
         echo "Unzipping build.zip..."
-        unzip -o build.zip -d ~/build/
+        unzip -o build.zip -d ~/build.zip/
         
         echo "Changing to app directory..."
         cd ~/build/
         
         echo "Installing production dependencies..."
-        npm install --production
+        npm install 
         
         echo "Restarting or starting PM2 app..."
-        pm2 restart app || pm2 start npm --name "app" -- start
+        pm2 restart app
         EOF
 
     
