@@ -1,4 +1,4 @@
-name: Node.js CI/CD - Simple
+name: Node.js CI/CD
 
 on:
   push:
@@ -16,43 +16,31 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'npm'
 
+  # Step 3: Install dependencies
     - name: Install Dependencies
       run: npm install
 
+  # Step 4: Build the application
     - name: Build the Application
       run: npm run build
 
-    - name: Archive Build Artifacts
+
+    - name: Deployment to EC2
+      env:
+        SSH_HOST: ${{ secrets.SSH_HOST }}
+        SSH_KEY: ${{ secrets.SSH_KEY }}
+        AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+        SSH_USER: ${{ secrets.SSH_USER }}
       run: |
-        zip -r app_deploy_bundle.zip build/ package.json package-lock.json
+        echo "Changing to app directory..."
+        cd ~/cd mdm-service
+        
+        echo "Installing production dependencies..."
+        npm install 
+        
+        echo "Starting app..."
+        npm start
+        EOF
 
-    - name: Set up SSH Agent
-      uses: webfactory/ssh-agent@v0.9.0
-      with:
-        ssh-private-key: ${{ secrets.SSH_KEY }}
-
-    - name: Transfer Build Artifacts to EC2
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_KEY }}
-        source: "app_deploy_bundle.zip"
-        target: "/tmp"
-
-    - name: Deploy to EC2 and Restart App
-      uses: appleboy/ssh-action@v0.1.10
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_KEY }}
-        script: |
-          APP_DIR="/home/${{ secrets.SSH_USER }}/mdm-service"
-          mkdir -p $APP_DIR
-          unzip -o /tmp/app_deploy_bundle.zip -d $APP_DIR
-          rm /tmp/app_deploy_bundle.zip
-          cd $APP_DIR
-          npm ci --production
-          npm start &
+    
