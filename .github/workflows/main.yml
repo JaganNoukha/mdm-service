@@ -40,16 +40,11 @@ jobs:
         AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         SSH_USER: ${{ secrets.SSH_USER }}
       run: |
-        echo "$SSH_KEY" > ec2_key.pem
-        chmod 600 ec2_key.pem
-
-        ssh -o StrictHostKeyChecking=no -i ec2_key.pem $SSH_USER@$SSH_HOST << 'EOF'
-        set -e
         echo "Unzipping build.zip..."
-        unzip -o build.zip -d ~/app/
+        unzip -o build.zip -d ~/build/
         
         echo "Changing to app directory..."
-        cd ~/app/
+        cd ~/build/
         
         echo "Installing production dependencies..."
         npm install --production
