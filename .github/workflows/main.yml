@@ -34,12 +34,21 @@ jobs:
       continue-on-error: true
 
     - name: Deployment to EC2
-      run: |
       env:
         SSH_HOST: ${{ secrets.SSH_HOST }}
         SSH_KEY: ${{ secrets.SSH_KEY }}
         AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         SSH_USER: ${{ secrets.SSH_USER }}
+      run: |
+        echo "$SSH_KEY" > ec2_key.pem
+        chmod 600 ec2_key.pem
 
-    - name: Run
-      run: npm start
+        scp -o StrictHostKeyChecking=no -i ec2_key.pem build.zip $SSH_USER@$SSH_HOST:/home/$SSH_USER/
+        ssh -o StrictHostKeyChecking=no -i ec2_key.pem $SSH_USER@$SSH_HOST << 'EOF'
+          unzip -o build.zip -d ~/app/
+          cd ~/app/
+          npm install --production
+          pm2 restart app || pm2 start npm --name "app" -- start
+        EOF
+
+    
