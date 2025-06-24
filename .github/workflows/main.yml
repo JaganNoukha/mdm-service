@@ -37,7 +37,7 @@ jobs:
     - name: Deployment to EC2
       run: |
       env:
-        AWS_EC2_HOST: ${{ secrets.AWS_EC2_HOST }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        SSH_HOST: ${{ secrets.SSH_HOST }}
+        SSH_KEY: ${{ secrets.SSH_KEY }}
         AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-        AWS_USER_NAME: ${{ secrets.AWS_USER_NAME }}
+        SSH_USER: ${{ secrets.SSH_USER }}
