@@ -17,48 +17,32 @@ jobs:
       with:
         node-version: '20'
 
+  
+  # Step 3: Install dependencies
     - name: Install Dependencies
       run: npm install
 
+  # Step 4: Build the application
     - name: Build the Application
       run: npm run build
 
-    - name: Archive Application Code
+  # Step 5: Archive the build artifacts and node_modules using zip
+    - name: Archive Build Artifacts and node_modules
       run: |
-        zip -r app.zip . -x "node_modules/*"
+        zip -r build.zip .
+        zip -r node_modules.zip node_modules/
+        ls -lh node_modules.zip  # Debugging step to check if file is created
+      continue-on-error: true
 
     - name: Deployment to EC2
       env:
         SSH_HOST: ${{ secrets.SSH_HOST }}
         SSH_KEY: ${{ secrets.SSH_KEY }}
+        AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         SSH_USER: ${{ secrets.SSH_USER }}
-        APP_DIR: "/var/www/my-node-app"
+        
       run: |
-        echo "Deploying to EC2 instance: $SSH_HOST"
-
-        mkdir -p ~/.ssh
-        echo "$SSH_KEY" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-
-        echo "Transferring app.zip to $SSH_USER@$SSH_HOST:$APP_DIR/"
-        scp -o StrictHostKeyChecking=no app.zip "$SSH_USER@$SSH_HOST:$APP_DIR/"
-
-        echo "Connecting to EC2 instance and deploying..."
-        ssh -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" << 'EOF'
-          cd "$APP_DIR"
-
-          echo "Stopping existing application..."
-          pm2 stop all || true
-
-          echo "Unzipping new application code..."
-          unzip -o app.zip -d .
-
-          echo "Installing production dependencies..."
-          npm install --production
-
-          echo "Starting new application..."
-          pm2 start ecosystem.config.js || true
-          pm2 save
-
-          echo "Deployment complete!"
-        EOF
+        cd ~/build.zip
+        npm install
+        npm start
+        
