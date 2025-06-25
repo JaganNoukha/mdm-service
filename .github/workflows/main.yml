@@ -26,7 +26,6 @@ jobs:
     - name: Run PM2 (Local to CI/CD Runner)
       run: |
         npm install -g pm2
-        cd ~/mdm-service
         pm2 start dist/src/main.js
       continue-on-error: true
 
