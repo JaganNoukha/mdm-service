@@ -37,7 +37,7 @@ jobs:
           echo "Copying build files to EC2..."
           scp -v -o StrictHostKeyChecking=no -i private_key.pem -r ./dist $SSH_USER@$SSH_HOST:/home/$SSH_USER/app2/
           echo "Starting app with PM2..."
-          ssh -v -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'EOF'
+          ssh -v -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST
             cd /home/$SSH_USER/app2/dist/src/
             pm2 start main.js  || pm2 restart app2
           EOF
