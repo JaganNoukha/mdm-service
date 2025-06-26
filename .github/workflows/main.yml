@@ -26,7 +26,7 @@ jobs:
     - name: Run PM2 (Local to CI/CD Runner)
       run: |
         npm install -g pm2
-        pm2 restart mdm-service || pm2 start dist/src/main.js
+        pm2 restart dist/src/main.js || pm2 start dist/src/main.js
       continue-on-error: true
 
     - name: Deployment to EC2
