@@ -9,18 +9,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name:  Checkout Repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name:  Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name:  Install Dependencies
+      - name: Install Dependencies
         run: npm install
 
-      - name:  Build the Application
+      - name: Build the Application
         run: npm run build
 
       - name: Deploy to EC2 via SSH
@@ -28,6 +28,7 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_KEY: ${{ secrets.SSH_KEY }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
         run: |
           echo "Saving SSH key..."
           echo "$SSH_KEY" > private_key.pem
@@ -39,6 +40,13 @@ jobs:
           echo "Copying build files to EC2..."
           scp -o StrictHostKeyChecking=no -i private_key.pem -r ./dist $SSH_USER@$SSH_HOST:/home/$SSH_USER/mdm-service/
 
+          echo "Creating .env file..."
+          echo "MONGODB_URI=$MONGODB_URI" > .env
+
+          echo "Uploading .env file to EC2..."
+          scp -o StrictHostKeyChecking=no -i private_key.pem .env $SSH_USER@$SSH_HOST:/home/$SSH_USER/mdm-service/
+          rm .env
+
           echo "Starting app with PM2..."
           ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST "
             cd /home/$SSH_USER/mdm-service/dist/src || exit 1
@@ -48,4 +56,3 @@ jobs:
           "
 
           rm -f private_key.pem
-
