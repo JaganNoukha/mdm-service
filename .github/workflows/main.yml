@@ -1,74 +1,47 @@
-name: Deploy to EC2
+name: Node.js CI/CD
 
 on:
   push:
-    branches:
-      - main # Trigger on pushes to the main branch
+    branches: [ "main" ]
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest # Use the latest Ubuntu runner
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4 # Action to checkout your repository code
+      - name:  Checkout Repository
+        uses: actions/checkout@v4
 
-      # If you have a build step (e.g., npm build, yarn build)
-      # Uncomment and configure this section:
-      # - name: Setup Node.js (Example for JavaScript/Node.js projects)
-      #   uses: actions/setup-node@v4
-      #   with:
-      #     node-version: '18' # Specify your Node.js version
-      # - name: Install dependencies and build (Example for JavaScript/Node.js projects)
-      #   run: |
-      #     npm install
-      #     npm run build # Or whatever your build command is (e.g., yarn build, parcel build)
-      #   env:
-      #     CI: true # Important for CI environments to prevent interactive prompts
+      - name:  Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Deploy to EC2 via SSH
+      - name:  Install Dependencies
+        run: npm install
+
+      - name:  Build the Application
+        run: npm run build
+
+      - name:  Deploy to EC2 via SSH
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_KEY: ${{ secrets.SSH_KEY }} # Your private SSH key
+          SSH_KEY: ${{ secrets.SSH_KEY }}
         run: |
-          echo "--- Starting Deployment to EC2 ---"
-
-          # 1. Write the private key to a file and set correct permissions
-          # Using echo -n to avoid adding an extra newline if the secret already has one
-          echo -n "$SSH_KEY" > private_key.pem
+          echo "Saving SSH key..."
+          echo "$SSH_KEY" > private_key.pem
           chmod 600 private_key.pem
-          echo "Private key written and permissions set."
 
-          # 2. Optional: Create application directory if it doesn't exist on EC2
-          # -o StrictHostKeyChecking=no: Bypasses host key checking (less secure, but common in CI)
-          # -i private_key.pem: Specifies the private key file
-          ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST "mkdir -p /home/$SSH_USER/app"
-          echo "Checked/created app directory on EC2."
+          echo "Creating app directory on EC2..."
+          ssh -v -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST "mkdir -p /home/$SSH_USER/app"
 
-          # 3. Copy build files to EC2
-          # -r: recursive copy for directories
-          scp -o StrictHostKeyChecking=no -i private_key.pem -r ./dist $SSH_USER@$SSH_HOST:/home/$SSH_USER/app/
-          echo "Build files copied to EC2."
+          echo "Copying build files to EC2..."
+          scp -v -o StrictHostKeyChecking=no -i private_key.pem -r ./dist $SSH_USER@$SSH_HOST:/home/$SSH_USER/app/
 
-          # 4. Restart the app using PM2 on EC2
-          # The 'EOF' block allows multi-line commands to be executed on the remote server
-          ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'EOF'
-            echo "Changing directory to /home/$SSH_USER/app/dist..."
+          echo "Starting app with PM2..."
+          ssh -v -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'EOF'
             cd /home/$SSH_USER/app/dist
-
-            echo "Checking PM2 status and restarting/starting main.js..."
-            # Check if main.js is managed by PM2, if so, restart; otherwise, start it.
-            pm2 restart main.js || pm2 start main.js --name my-application-name # Add --name for easier management
-            echo "PM2 command executed."
-
-            # Optional: Save PM2 process list so it restarts on reboot
-            # pm2 save
-            # echo "PM2 process list saved."
+            pm2 delete my-app || true
+            pm2 start main.js --name my-app || pm2 restart my-app
           EOF
-          echo "PM2 commands executed on EC2."
-
-          echo "--- Deployment Complete! ---"
-
-      - name: Clean up private key (Important for security)
-        run: rm -f private_key.pem # Ensure the key is removed from the runner after use
