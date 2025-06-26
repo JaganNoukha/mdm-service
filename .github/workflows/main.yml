@@ -41,11 +41,13 @@ jobs:
 
           echo "Copying build files to EC2..."
           scp -r -o StrictHostKeyChecking=no -i private_key.pem ./dist $SSH_USER@$SSH_HOST:/home/$SSH_USER/mdm-service/
+          scp -r -o StrictHostKeyChecking=no -i private_key.pem ./package.json $SSH_USER@$SSH_HOST:/home/$SSH_USER/mdm-service/
 
           echo "Restarting app with PM2..."
           ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'REMOTE'
             cd /home/$USER/mdm-service/dist/src
-            pm2 restart mdm-service --update-env || pm2 start main.js --name mdm-service
+            pm2 delete mdm-service || true
+            pm2 start main.js --name mdm-service
             pm2 save
           REMOTE
 
