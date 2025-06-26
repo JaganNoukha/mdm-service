@@ -29,17 +29,18 @@ jobs:
         SSH_USER: ${{ secrets.SSH_USER }}
         SSH_KEY: ${{ secrets.SSH_KEY }}
       run: |
-        echo "$SSH_KEY" > bill-Claim.pem
-        chmod 600 bill-Claim.pem
+        echo "$SSH_KEY" > private_key.pem
+        chmod 600 private_key.pem
 
         # Optional: Create app directory if it doesn't exist
-        ssh -o StrictHostKeyChecking=no -i bill-Claim.pem $SSH_USER@$SSH_HOST "mkdir -p /home/$SSH_USER/app"
+        ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST "mkdir -p /home/$SSH_USER/app"
 
         # Copy build files to EC2
-        scp -o StrictHostKeyChecking=no -i bill-Claim.pem -r ./dist $SSH_USER@$SSH_HOST:/home/$SSH_USER/app/
+        scp -o StrictHostKeyChecking=no -i private_key.pem -r ./dist $SSH_USER@$SSH_HOST:/home/$SSH_USER/app/
 
         # Restart the app using PM2 on EC2
-        ssh -o StrictHostKeyChecking=no -i bill-Claim.pem $SSH_USER@$SSH_HOST << 'EOF'
+        ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'EOF'
           cd /home/$SSH_USER/app/dist
           pm2 restart main.js || pm2 start main.js
-          EOF
+        EOF
+          
