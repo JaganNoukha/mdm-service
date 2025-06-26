@@ -42,7 +42,7 @@ jobs:
           echo "Starting app with PM2..."
           ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST "
             cd /home/$SSH_USER/mdm-service/dist/src || exit 1
-            pm2 delete mdm-service || true
+            pm2 describe mdm-service >/dev/null && pm2 delete mdm-service
             pm2 start main.js --name mdm-service
             pm2 save
           "
