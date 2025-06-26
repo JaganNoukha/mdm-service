@@ -7,24 +7,23 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Checkout Repository
+      - name:  Checkout Repository
         uses: actions/checkout@v4
-        
-      - name: Setup Node.js
+
+      - name:  Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          
-      - name: Install Dependencies
-        run: npm ci
-        
-      - name: Build the Application
+
+      - name:  Install Dependencies
+        run: npm install
+
+      - name:  Build the Application
         run: npm run build
-        
-      - name: Deploy to EC2 via SSH
+
+      - name:  Deploy to EC2 via SSH
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -33,60 +32,12 @@ jobs:
           echo "Saving SSH key..."
           echo "$SSH_KEY" > private_key.pem
           chmod 600 private_key.pem
-          
-          echo "Testing SSH connection..."
-          ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST "echo 'SSH connection successful'"
-          
           echo "Creating app directory on EC2..."
-          ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST "mkdir -p /home/$SSH_USER/mdm-service"
-          
-          echo "Copying application files to EC2..."
-          # Copy package.json and package-lock.json first
-          scp -o StrictHostKeyChecking=no -i private_key.pem package*.json $SSH_USER@$SSH_HOST:/home/$SSH_USER/mdm-service/
-          
-          # Copy dist folder
-          scp -o StrictHostKeyChecking=no -i private_key.pem -r ./dist $SSH_USER@$SSH_HOST:/home/$SSH_USER/mdm-service/
-          
-          # Copy other necessary files (if any)
-          # scp -o StrictHostKeyChecking=no -i private_key.pem -r ./node_modules $SSH_USER@$SSH_HOST:/home/$SSH_USER/mdm-service/ || true
-          
-          echo "Installing dependencies and managing PM2 process..."
-          ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'EOF'
-            # Clean up any existing processes first
-            pm2 stop mdm-service || true
-            pm2 delete mdm-service || true
-            
-            # Navigate to application directory
-            cd /home/$SSH_USER/mdm-service
-            
-            # Remove old node_modules and package-lock.json for fresh install
-            rm -rf node_modules package-lock.json || true
-            
-            # Install production dependencies
-            npm ci --only=production
-            
-            # Navigate to dist directory
-            cd dist
-            
-            # Check if main.js exists
-            if [ ! -f "main.js" ]; then
-              echo "Error: main.js not found in dist directory"
-              ls -la
-              exit 1
-            fi
-            
-            # Start new PM2 process with proper configuration
-            pm2 start main.js --name mdm-service --env production
-            
-            # Save PM2 configuration
-            pm2 save
-            
-            # Show PM2 status
-            pm2 list
-            
-            # Show application logs
-            pm2 logs mdm-service --lines 10
+          ssh -v -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST "mkdir -p /home/$SSH_USER/mdm-service"
+          echo "Copying build files to EC2..."
+          scp -v -o StrictHostKeyChecking=no -i private_key.pem -r ./dist $SSH_USER@$SSH_HOST:/home/$SSH_USER/mdm-service/
+          echo "Starting app with PM2..."
+          ssh -v -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'EOF'
+            cd /home/$SSH_USER/mdm-service/dist/src/
+            pm2 start main.js  || pm2 restart mdm-service
           EOF
-          
-          echo "Cleaning up SSH key..."
-          rm -f private_key.pem
