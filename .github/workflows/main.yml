@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,16 +23,23 @@ jobs:
     - name: Build the Application
       run: npm run build
 
-    - name: Run PM2 (Local to CI/CD Runner)
-      run: |
-        npm install -g pm2
-        pm2 restart dist/src/main.js || pm2 start dist/src/main.js
-      continue-on-error: true
-
-    - name: Deployment to EC2
-      run: |
+    - name: Deploy to EC2 via SSH
       env:
         SSH_HOST: ${{ secrets.SSH_HOST }}
-        SSH_KEY: ${{ secrets.SSH_KEY }}
-        AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
         SSH_USER: ${{ secrets.SSH_USER }}
+        SSH_KEY: ${{ secrets.SSH_KEY }}
+      run: |
+        echo "$SSH_KEY" > private_key.pem
+        chmod 600 private_key.pem
+
+        # Optional: Create app directory if it doesn't exist
+        ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST "mkdir -p /home/$SSH_USER/app"
+
+        # Copy build files to EC2
+        scp -o StrictHostKeyChecking=no -i private_key.pem -r ./dist $SSH_USER@$SSH_HOST:/home/$SSH_USER/app/
+
+        # Restart the app using PM2 on EC2
+        ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'EOF'
+          cd /home/$SSH_USER/app/dist
+          pm2 restart main.js || pm2 start main.js
+          EOF
