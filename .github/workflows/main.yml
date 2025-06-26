@@ -9,69 +9,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name:  Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name:  Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install Dependencies
+      - name:  Install Dependencies
         run: npm install
 
-      - name: Build the Application
+      - name:  Build the Application
         run: npm run build
 
-      - name: Archive Build Artifacts and node_modules
-        run: |
-          zip -r build.zip dist/
-          zip -r node_modules.zip node_modules/
-          ls -lh node_modules.zip
-        continue-on-error: false
-
-      - name: Deploy to EC2 via SSH
+      - name:  Deploy to EC2 via SSH
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_KEY: ${{ secrets.SSH_KEY }}
         run: |
-          set -e  # Exit immediately on any error
-
           echo "Saving SSH key..."
           echo "$SSH_KEY" > private_key.pem
           chmod 600 private_key.pem
 
-          echo "Testing SSH connection..."
-          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST "echo 'SSH connected successfully'"
+          echo "Creating app directory on EC2..."
+          ssh -v -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST "mkdir -p /home/$SSH_USER/mdm-service"
 
           echo "Copying build files to EC2..."
-          scp -o ConnectTimeout=15 -o StrictHostKeyChecking=no -i private_key.pem build.zip node_modules.zip $SSH_USER@$SSH_HOST:/home/$SSH_USER/mdm-service/
+          scp -v -o StrictHostKeyChecking=no -i private_key.pem -r ./dist $SSH_USER@$SSH_HOST:/home/$SSH_USER/mdm-service/
 
-          echo "Unzipping and restarting app..."
-          ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'EOF'
-            set -e
-            cd /home/ubuntu/mdm-service
-
-            echo "Unzipping build files..."
-            unzip -o build.zip || { echo "Unzip failed"; exit 1; }
-            unzip -o node_modules.zip || { echo "Unzip failed"; exit 1; }
-
-            echo "Restarting PM2..."
-            if ! command -v pm2 &> /dev/null; then
-              echo "PM2 not found, installing..."
-              npm install -g pm2
-            fi
-
-            if pm2 list | grep -q "mdm-service"; then
-              pm2 restart mdm-service
-            else
-              pm2 start dist/src/main.js --name mdm-service
-            fi
-
-            pm2 save
-            pm2 status mdm-service
+          echo "Starting app with PM2..."
+          ssh -v -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'EOF'
+            cd /home/$SSH_USER/mdm-service/dist/src/
+            sudo npm i
+            sudo npm pm2 install -g
+            sudo pm2 start main.js
           EOF
-
-          echo "Cleaning up..."
-          rm -f private_key.pem
