@@ -45,9 +45,9 @@ jobs:
 
           echo "Restarting app with PM2..."
           ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'REMOTE'
-            cd /home/$USER/mdm-service/dist/src
+            cd /home/$USER/mdm-service/src
             pm2 delete mdm-service || true
-            pm2 start main.js --name mdm-service
+            pm2 start main.ts --name mdm-service
             pm2 save
           REMOTE
 
