@@ -41,7 +41,7 @@ jobs:
 
           echo "Starting mdm-service with PM2..."
           ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'EOF'
-            cd /home/$SSH_USER/mdm-service/dist
+            cd /home/$SSH_USER/mdm-service/dist/src
             pm2 delete mdm-service || true
             pm2 start main.js --name mdm-service || pm2 restart mdm-service
           EOF
