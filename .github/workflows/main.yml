@@ -52,7 +52,15 @@ jobs:
           
           echo "Installing dependencies and managing PM2 process..."
           ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'EOF'
+            # Clean up any existing processes first
+            pm2 stop mdm-service || true
+            pm2 delete mdm-service || true
+            
+            # Navigate to application directory
             cd /home/$SSH_USER/mdm-service
+            
+            # Remove old node_modules and package-lock.json for fresh install
+            rm -rf node_modules package-lock.json || true
             
             # Install production dependencies
             npm ci --only=production
@@ -60,9 +68,12 @@ jobs:
             # Navigate to dist directory
             cd dist
             
-            # Stop existing PM2 process
-            pm2 stop mdm-service || true
-            pm2 delete mdm-service || true
+            # Check if main.js exists
+            if [ ! -f "main.js" ]; then
+              echo "Error: main.js not found in dist directory"
+              ls -la
+              exit 1
+            fi
             
             # Start new PM2 process with proper configuration
             pm2 start main.js --name mdm-service --env production
@@ -72,6 +83,9 @@ jobs:
             
             # Show PM2 status
             pm2 list
+            
+            # Show application logs
+            pm2 logs mdm-service --lines 10
           EOF
           
           echo "Cleaning up SSH key..."
