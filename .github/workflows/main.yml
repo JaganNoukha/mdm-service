@@ -43,5 +43,5 @@ jobs:
           ssh -v -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'EOF'
             cd /home/ubuntu/mdm-service/dist/src/
             npm install -g pm2
-            sudo pm2 start main.js  || pm2 restart mdm-service
+            pm2 start main.js || pm2 restart mdm-service
           EOF
