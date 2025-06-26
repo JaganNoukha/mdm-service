@@ -9,21 +9,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name:  Checkout Repository
+      - name: 📦 Checkout Repository
         uses: actions/checkout@v4
 
-      - name:  Setup Node.js
+      - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name:  Install Dependencies
+      - name: 📥 Install Dependencies
         run: npm install
 
-      - name:  Build the Application
+      - name: 🛠️ Build the Application
         run: npm run build
 
-      - name:  Deploy to EC2 via SSH
+      - name: 🚀 Deploy to EC2 via SSH
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
@@ -34,13 +34,14 @@ jobs:
           chmod 600 private_key.pem
 
           echo "Creating app directory on EC2..."
-          ssh -v -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST "mkdir -p /home/$SSH_USER/mdm-service"
+          ssh -v -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST "mkdir -p /home/$SSH_USER/app"
 
           echo "Copying build files to EC2..."
-          scp -v -o StrictHostKeyChecking=no -i private_key.pem -r ./dist $SSH_USER@$SSH_HOST:/home/$SSH_USER/mdm-service/
+          scp -v -o StrictHostKeyChecking=no -i private_key.pem -r ./dist $SSH_USER@$SSH_HOST:/home/$SSH_USER/app/
 
           echo "Starting app with PM2..."
           ssh -v -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'EOF'
-            cd /home/$SSH_USER/mdm-service/dist/src/
-            pm2 start main.js  || pm2 restart mdm-service
+            cd /home/$SSH_USER/app/dist
+            pm2 delete my-app || true
+            pm2 start main.js --name my-app || pm2 restart my-app
           EOF
