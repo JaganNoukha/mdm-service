@@ -20,7 +20,7 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: 🛠️ Build the Application
+      - name: Build the Application
         run: npm run build
 
       - name: Deploy to EC2 via SSH
@@ -43,5 +43,5 @@ jobs:
           ssh -v -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << 'EOF'
             cd /home/$SSH_USER/mdm-service/dist/src
             pm2 delete my-app || true
-            pm2 start main.js || pm2 restart my-app
+            pm2 start main.js || pm2 restart mdm-service
           EOF
