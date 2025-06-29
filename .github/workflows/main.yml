@@ -46,7 +46,6 @@ jobs:
           echo "Running deployment commands on EC2..."
           ssh -o StrictHostKeyChecking=no -i private_key.pem $SSH_USER@$SSH_HOST << EOF
             cd /home/$SSH_USER/mdm-service
-            npm install --omit=dev
             npm install pm2 -g
             pm2 delete all || true
             pm2 start dist/src/main.js --name mdm-service
